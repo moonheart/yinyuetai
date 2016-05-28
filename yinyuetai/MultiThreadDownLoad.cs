@@ -107,29 +107,30 @@ namespace yinyuetai
 
         public void Start()
         {
-
             HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(_fileUrl);
-            HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-            _extName = response.ResponseUri.ToString().Substring(response.ResponseUri.ToString().LastIndexOf('.'));//获取真实扩展名
-            _fileSize = response.ContentLength;
-
-            int singelNum = (int)(_fileSize / _threadNum);      //平均分配
-            int remainder = (int)(_fileSize % _threadNum);      //获取剩余的
-            request.Abort();
-            response.Close();
-            for (int i = 0; i < _threadNum; i++)
+            using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
             {
-                List<int> range = new List<int>();
-                range.Add(i * singelNum);
-                if (remainder != 0 && (_threadNum - 1) == i)    //剩余的交给最后一个线程
-                    range.Add(i * singelNum + singelNum + remainder - 1);
-                else
-                    range.Add(i * singelNum + singelNum - 1);
-                readft.Add(range);
-                _thread[i] = new Thread(new ThreadStart(Download));
-                _thread[i].Name = i.ToString();
-                _thread[i].Start();
+                _extName = response.ResponseUri.ToString().Substring(response.ResponseUri.ToString().LastIndexOf('.'));//获取真实扩展名
+                _fileSize = response.ContentLength;
+
+                int singelNum = (int)(_fileSize / _threadNum);      //平均分配
+                int remainder = (int)(_fileSize % _threadNum);      //获取剩余的
+                for (int i = 0; i < _threadNum; i++)
+                {
+                    List<int> range = new List<int>();
+                    range.Add(i * singelNum);
+                    if (remainder != 0 && (_threadNum - 1) == i)    //剩余的交给最后一个线程
+                        range.Add(i * singelNum + singelNum + remainder - 1);
+                    else
+                        range.Add(i * singelNum + singelNum - 1);
+                    readft.Add(range);
+                    _thread[i] = new Thread(new ThreadStart(Download));
+                    _thread[i].Name = i.ToString();
+                    _thread[i].Start();
+                    request.Abort();
+                }
             }
+
         }
 
         private void Download()
